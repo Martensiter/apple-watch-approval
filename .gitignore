@@ -1,0 +1,17 @@
+# 環境変数・シークレット
+.env
+
+# サーバーが生成するファイル
+.tunnel_url
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
