@@ -22,9 +22,12 @@ import urllib.error
 SERVER_URL = os.environ.get("APPROVAL_SERVER_URL", "http://localhost:8765")
 
 # 承認が必要なツール
-# Write/Edit はファイル編集のみで比較的安全なため除外し、Bash のみ承認対象とする
 APPROVAL_TOOLS = {
     "Bash",
+    "Write",
+    "Edit",
+    "MultiEdit",
+    "NotebookEdit",
 }
 
 
