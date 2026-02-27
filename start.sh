@@ -18,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 TUNNEL_URL_FILE="$SCRIPT_DIR/.tunnel_url"
 LOG_DIR="$SCRIPT_DIR/logs"
+VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python3"
 
 mkdir -p "$LOG_DIR"
 
@@ -118,4 +119,9 @@ echo ""
 
 # サーバー実行
 cd "$SCRIPT_DIR"
-python3 server.py
+if [ -f "$VENV_PYTHON" ]; then
+    "$VENV_PYTHON" server.py
+else
+    echo "⚠️  仮想環境が見つかりません。先に setup.sh を実行してください。"
+    exit 1
+fi
