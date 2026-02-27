@@ -21,26 +21,10 @@ import urllib.error
 
 SERVER_URL = os.environ.get("APPROVAL_SERVER_URL", "http://localhost:8765")
 
-# 承認不要なツール (読み取り専用など)
-SKIP_TOOLS = {
-    "Read",
-    "Glob",
-    "Grep",
-    "TodoWrite",
-    "TodoRead",
-    "LS",
-    "WebFetch",
-    "WebSearch",
-}
-
 # 承認が必要なツール
+# Write/Edit はファイル編集のみで比較的安全なため除外し、Bash のみ承認対象とする
 APPROVAL_TOOLS = {
     "Bash",
-    "Edit",
-    "Write",
-    "MultiEdit",
-    "NotebookEdit",
-    "Task",
 }
 
 
@@ -100,8 +84,8 @@ def main():
 
     tool_name = data.get("tool_name", "")
 
-    # 承認不要なツールはスキップ
-    if tool_name in SKIP_TOOLS or tool_name not in APPROVAL_TOOLS:
+    # 承認対象外のツールはスキップ
+    if tool_name not in APPROVAL_TOOLS:
         sys.exit(0)
 
     tool_input = data.get("tool_input", {})
