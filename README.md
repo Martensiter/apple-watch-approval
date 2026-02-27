@@ -1,103 +1,133 @@
 # Apple Watch Approval for Claude Code
 
-Claude Code（AIエージェント）がファイル編集やコマンド実行をしようとするたびに、Apple Watch / iPhone に通知を送り、承認/拒否できるシステムです。
+Approve or deny Claude Code's actions from your **Apple Watch or iPhone** before they run.
 
-## 仕組み
+Every time Claude Code tries to execute a command or edit a file, you get a push notification with **✅ Approve** and **❌ Deny** buttons.
+
+![Notification example](https://ntfy.sh/docs/static/img/ios-detail-demo.png)
+
+## How it works
 
 ```
-Claude Code hook → POST /request → ntfy.sh通知 → Watch/iPhoneでタップ
-→ POST /approve or /deny → hookに応答 → Claude Code続行/ブロック
+Claude Code  →  PreToolUse hook  →  approval server  →  ntfy.sh push notification
+                                                      ←  tap Approve / Deny on Watch
+Claude Code continues (or is blocked)
 ```
 
-1. Claude Code が `Bash` / `Write` / `Edit` などのツールを実行しようとする
-2. `hook.py` (PreToolUse hook) が起動し、ローカルの承認サーバーにリクエストを送信
-3. サーバーが [ntfy.sh](https://ntfy.sh) 経由でプッシュ通知を送信
-4. iPhone / Apple Watch に通知が届き、**✅ 承認** / **❌ 拒否** ボタンをタップ
-5. Claude Code が続行またはブロックされる
+1. Claude Code triggers a tool (Bash, Write, Edit, etc.)
+2. `hook.py` sends the request to a local Flask server
+3. The server pushes a notification via [ntfy.sh](https://ntfy.sh)
+4. You tap **Approve** or **Deny** on your iPhone / Apple Watch
+5. Claude Code proceeds or is blocked accordingly
 
-## セットアップ
+## Requirements
 
-### 前提条件
-
+- macOS (Apple Silicon or Intel)
+- [Claude Code](https://docs.anthropic.com/claude-code) installed
+- iPhone with the [ntfy app](https://apps.apple.com/app/ntfy/id1625396347)
 - Python 3.8+
-- iPhone に [ntfy アプリ](https://apps.apple.com/app/ntfy/id1625396347) をインストール済み
-- (オプション) アクションボタンを使う場合は [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) をインストール済み
+- Homebrew (for cloudflared)
 
-### 手順
-
-```bash
-cd apple-watch-approval
-
-# 1. セットアップ (初回のみ)
-./setup.sh
-
-# 2. サーバー起動
-./start.sh
-```
-
-`setup.sh` が以下を自動実行します：
-- Python パッケージのインストール (`flask`, `requests`)
-- `.env` ファイルの生成 (ntfy.sh トピック名の設定)
-- Claude Code の `~/.claude/settings.json` にフックを登録
-
-### ntfy アプリの設定
-
-1. iPhone に ntfy アプリをインストール
-2. セットアップ時に表示されたトピック名を購読
-   - 例: `https://ntfy.sh/claude-approval-xxxxxxxx`
-3. Apple Watch にも通知が転送されます
-
-## 設定
-
-`.env.example` を `.env` にコピーして編集：
+## Install (one-liner)
 
 ```bash
-cp .env.example .env
+curl -fsSL https://raw.githubusercontent.com/Martensiter/apple-watch-approval/main/install.sh | bash
 ```
 
-| 変数 | デフォルト | 説明 |
-|------|-----------|------|
-| `NTFY_TOPIC` | `claude-approval` | ntfy.sh トピック名（ユニークな名前を推奨） |
-| `NTFY_SERVER` | `https://ntfy.sh` | ntfy.sh サーバー URL |
-| `APPROVAL_TIMEOUT` | `60` | 承認待機タイムアウト（秒） |
-| `PORT` | `8765` | サーバーポート |
-| `PUBLIC_URL` | - | Cloudflare Tunnel など公開URL（アクションボタン用） |
+Or clone and run manually:
 
-## アクションボタンについて
-
-通知のボタンから直接承認/拒否するには、公開URLが必要です。
-
-`cloudflared` がインストールされていれば `start.sh` が自動的に Cloudflare Tunnel を起動し、公開URLを設定します。
-
-```
-インストール: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+```bash
+git clone https://github.com/Martensiter/apple-watch-approval.git ~/apple-watch-approval
+cd ~/apple-watch-approval && bash install.sh
 ```
 
-## 承認が必要なツール
+The installer will:
+1. Create a Python virtual environment and install dependencies
+2. Generate a `.env` file with a unique ntfy.sh topic
+3. Register a Claude Code PreToolUse hook in `~/.claude/settings.json`
+4. Install `cloudflared` via Homebrew (for action buttons)
+5. Register a launchd agent so the server **auto-starts on every login**
 
-| ツール | 説明 |
-|--------|------|
-| `Bash` | コマンド実行 |
-| `Write` | ファイル作成 |
-| `Edit` | ファイル編集 |
-| `MultiEdit` | ファイル一括編集 |
-| `NotebookEdit` | Jupyter Notebook 編集 |
-| `Task` | サブエージェント起動 |
+## After installation
 
-読み取り専用ツール（`Read`, `Glob`, `Grep` など）は承認不要でスキップされます。
+**1. Install the ntfy app on your iPhone**
 
-## ファイル構成
+→ [App Store](https://apps.apple.com/app/ntfy/id1625396347)
+
+**2. Subscribe to your topic**
+
+Open the ntfy app → Add subscription → enter the topic shown at the end of install (e.g. `claude-approval-a1b2c3d4`).  
+Make sure **"Use another server"** is **OFF**.
+
+**3. Start Claude Code**
+
+That's it. Notifications will appear on your iPhone and Apple Watch automatically.
+
+## Uninstall
+
+```bash
+bash ~/apple-watch-approval/uninstall.sh
+rm -rf ~/apple-watch-approval
+```
+
+## Configuration
+
+Edit `~/apple-watch-approval/.env` to change settings:
+
+| Variable | Default | Description |
+|---|---|---|
+| `NTFY_TOPIC` | `claude-approval-xxxx` | Your unique ntfy.sh topic name |
+| `NTFY_SERVER` | `https://ntfy.sh` | ntfy server URL (change for self-hosted) |
+| `APPROVAL_TIMEOUT` | `60` | Seconds to wait before auto-denying |
+| `PORT` | `8765` | Local server port |
+| `PUBLIC_URL` | *(auto)* | Set by Cloudflare Tunnel automatically |
+
+After editing `.env`, restart the server:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.$(whoami).apple-watch-approval.plist
+launchctl load  ~/Library/LaunchAgents/com.$(whoami).apple-watch-approval.plist
+```
+
+## Which tools require approval?
+
+| Tool | Description |
+|---|---|
+| `Bash` | Shell command execution |
+| `Write` | Create a new file |
+| `Edit` / `MultiEdit` | Edit an existing file |
+| `NotebookEdit` | Edit a Jupyter notebook |
+
+Read-only tools (`Read`, `Glob`, `Grep`, `WebSearch`, etc.) are **never** sent for approval.
+
+## Troubleshooting
+
+**Notifications arrive but buttons don't work**  
+→ The Cloudflare Tunnel may have restarted (URL changes on each restart).  
+→ Check the server is running: `curl http://localhost:8765/health`  
+→ Re-run `start.sh` to get a fresh Tunnel URL.
+
+**No notifications at all**  
+→ Check the log: `tail -f ~/apple-watch-approval/logs/launchd.log`  
+→ Make sure your ntfy topic is subscribed **without** "Use another server".
+
+**Server not starting on login**  
+→ Run `bash ~/apple-watch-approval/install.sh` again to re-register the launchd agent.
+
+## Project structure
 
 ```
 apple-watch-approval/
-├── server.py          # Flask 承認サーバー
-├── hook.py            # Claude Code PreToolUse フック
-├── setup.sh           # 初回セットアップスクリプト
-├── start.sh           # サーバー起動スクリプト
-├── requirements.txt   # Python 依存パッケージ
-└── .env.example       # 環境変数サンプル
+├── server.py       Flask server that manages approval requests
+├── hook.py         Claude Code PreToolUse hook
+├── start.sh        Starts server + Cloudflare Tunnel
+├── install.sh      One-command installer
+├── uninstall.sh    Removes everything (except the directory)
+├── setup.sh        Manual setup helper (called by install.sh)
+├── requirements.txt
+└── .env.example
 ```
 
-## ライセンス
+## License
 
 MIT

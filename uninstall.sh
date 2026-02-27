@@ -26,7 +26,11 @@ else
     echo "ℹ️  launchd agent not found (already removed?)"
 fi
 
-# 2. Remove Claude Code hook
+# 2. Kill running server / tunnel
+pkill -f "python3.*server.py" 2>/dev/null && echo "✅ Server process stopped" || true
+pkill -f "cloudflared" 2>/dev/null && echo "✅ Cloudflare Tunnel stopped" || true
+
+# 3. Remove Claude Code hook from ~/.claude/settings.json
 if [ -f "$CLAUDE_SETTINGS" ]; then
     python3 - <<PYEOF
 import json
@@ -53,19 +57,15 @@ else:
     settings["hooks"]["PreToolUse"] = new_pre
     if not settings["hooks"]["PreToolUse"]:
         del settings["hooks"]["PreToolUse"]
-    if not settings["hooks"]:
-        del settings["hooks"]
+    if not settings.get("hooks"):
+        settings.pop("hooks", None)
     with open(path, "w") as f:
         json.dump(settings, f, ensure_ascii=False, indent=2)
     print("✅ Claude Code hook removed from ~/.claude/settings.json")
 PYEOF
 fi
 
-# 3. Kill running server/tunnel
-pkill -f "python3.*server.py" 2>/dev/null && echo "✅ Server process stopped" || true
-pkill -f "cloudflared" 2>/dev/null && echo "✅ Cloudflare Tunnel stopped" || true
-
 echo ""
-echo "Done. The ~/apple-watch-approval directory was NOT deleted."
-echo "To fully remove it, run:  rm -rf $INSTALL_DIR"
+echo "Done. The install directory was NOT deleted."
+echo "To fully remove it, run:  rm -rf \"$INSTALL_DIR\""
 echo ""
