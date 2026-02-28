@@ -82,7 +82,12 @@ def main():
         raw = sys.stdin.read()
         data = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
-        # パース失敗はフェールオープン
+        sys.exit(0)
+
+    # Cursor (IDE) から呼ばれた場合はスキップ
+    # Cursor は環境変数 CURSOR_VERSION をセットし、
+    # stdin に cursor_version フィールドを含む
+    if os.environ.get("CURSOR_VERSION") or data.get("cursor_version"):
         sys.exit(0)
 
     tool_name = data.get("tool_name", "")
