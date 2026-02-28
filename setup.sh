@@ -22,19 +22,17 @@ echo "================================================"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Python 仮想環境のセットアップ & 依存パッケージのインストール
+# Python 依存パッケージのインストール
 # ---------------------------------------------------------------------------
-echo "▶ Python 仮想環境をセットアップ中..."
-VENV_DIR="$SCRIPT_DIR/.venv"
-if [ ! -d "$VENV_DIR" ]; then
-    python3 -m venv "$VENV_DIR"
-    echo "  ✅ 仮想環境を作成しました: $VENV_DIR"
-else
-    echo "  ℹ️  仮想環境が既に存在します: $VENV_DIR"
-fi
-
 echo "▶ Python パッケージをインストール中..."
-"$VENV_DIR/bin/pip" install -r "$SCRIPT_DIR/requirements.txt" --quiet
+if command -v pip3 &>/dev/null; then
+    pip3 install -r "$SCRIPT_DIR/requirements.txt" --quiet
+elif command -v pip &>/dev/null; then
+    pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
+else
+    echo "  ⚠️  pip が見つかりません。手動でインストールしてください:"
+    echo "     pip install flask requests"
+fi
 echo "  ✅ パッケージインストール完了"
 echo ""
 
@@ -93,13 +91,12 @@ mkdir -p "$(dirname "$CLAUDE_SETTINGS")"
 # 既存の settings.json があるか確認
 if [ -f "$CLAUDE_SETTINGS" ]; then
     # Python で既存の設定にフックをマージする
-    "$VENV_DIR/bin/python3" << PYEOF
+    python3 << PYEOF
 import json
 import sys
 
 settings_path = "$CLAUDE_SETTINGS"
 hook_path = "$HOOK_PATH"
-venv_python = "$VENV_DIR/bin/python3"
 
 try:
     with open(settings_path) as f:
@@ -107,7 +104,7 @@ try:
 except Exception:
     settings = {}
 
-hook_cmd = f"{venv_python} {hook_path}"
+hook_cmd = f"python3 {hook_path}"
 
 # フック設定
 new_hook = {
@@ -139,7 +136,7 @@ else:
 PYEOF
 else
     # 新規作成
-    "$VENV_DIR/bin/python3" -c "
+    python3 -c "
 import json
 settings = {
     'hooks': {
@@ -149,7 +146,7 @@ settings = {
                 'hooks': [
                     {
                         'type': 'command',
-                        'command': '$VENV_DIR/bin/python3 $HOOK_PATH'
+                        'command': 'python3 $HOOK_PATH'
                     }
                 ]
             }

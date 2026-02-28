@@ -21,13 +21,26 @@ import urllib.error
 
 SERVER_URL = os.environ.get("APPROVAL_SERVER_URL", "http://localhost:8765")
 
+# 承認不要なツール (読み取り専用など)
+SKIP_TOOLS = {
+    "Read",
+    "Glob",
+    "Grep",
+    "TodoWrite",
+    "TodoRead",
+    "LS",
+    "WebFetch",
+    "WebSearch",
+}
+
 # 承認が必要なツール
 APPROVAL_TOOLS = {
     "Bash",
-    "Write",
     "Edit",
+    "Write",
     "MultiEdit",
     "NotebookEdit",
+    "Task",
 }
 
 
@@ -82,18 +95,13 @@ def main():
         raw = sys.stdin.read()
         data = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
-        sys.exit(0)
-
-    # Cursor (IDE) から呼ばれた場合はスキップ
-    # Cursor は環境変数 CURSOR_VERSION をセットし、
-    # stdin に cursor_version フィールドを含む
-    if os.environ.get("CURSOR_VERSION") or data.get("cursor_version"):
+        # パース失敗はフェールオープン
         sys.exit(0)
 
     tool_name = data.get("tool_name", "")
 
-    # 承認対象外のツールはスキップ
-    if tool_name not in APPROVAL_TOOLS:
+    # 承認不要なツールはスキップ
+    if tool_name in SKIP_TOOLS or tool_name not in APPROVAL_TOOLS:
         sys.exit(0)
 
     tool_input = data.get("tool_input", {})

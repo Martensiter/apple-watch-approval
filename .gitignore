@@ -15,3 +15,6 @@ env/
 
 # macOS
 .DS_Store
+
+# launchd plist (ユーザー固有の絶対パスを含むため)
+*.plist
